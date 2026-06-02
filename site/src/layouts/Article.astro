@@ -1,0 +1,35 @@
+---
+interface Props {
+  title: string;
+  date: Date;
+  tags: string[];
+}
+const { title, date, tags } = Astro.props;
+---
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — HYPERISE</title>
+  </head>
+  <body class="bg-zinc-950 text-zinc-100 min-h-screen">
+    <main class="max-w-3xl mx-auto px-6 py-12">
+      <nav class="mb-8">
+        <a href="/" class="text-indigo-400 hover:text-indigo-300 transition">← На главную</a>
+      </nav>
+      <header class="mb-10">
+        <h1 class="text-3xl font-bold mb-3">{title}</h1>
+        <div class="flex flex-wrap gap-3 text-sm text-zinc-400">
+          <time>{date.toLocaleDateString('ru-RU')}</time>
+          {tags.map((tag) => (
+            <span class="bg-zinc-800 px-2 py-0.5 rounded text-zinc-300">#{tag}</span>
+          ))}
+        </div>
+      </header>
+      <article class="prose prose-invert prose-zinc max-w-none">
+        <slot />
+      </article>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: hyperise
+    runtime: static
+    buildCommand: cd site && npm ci && npm run build
+    staticPublishPath: site/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 20
