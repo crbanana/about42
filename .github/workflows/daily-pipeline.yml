@@ -13,19 +13,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.12'
+          version: "0.5.x"
+
+      - name: Set up Python
+        run: uv python install 3.12
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: uv sync
 
       - name: Run pipeline
-        run: python -m agents.pipeline
+        run: uv run python -m agents.pipeline
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
 
       - name: Commit and push changes
         run: |

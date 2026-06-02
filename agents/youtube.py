@@ -1,17 +1,16 @@
-"""YouTube data fetching: metadata + transcripts."""
+"""YouTube data fetching via yt-dlp (no API key needed)."""
 
-import os
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
 
-from googleapiclient.discovery import build
+import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
 
-
-YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY")
 # Example channels — add more as needed
-CHANNEL_HANDLES = ["@LigaKubizma"]
+CHANNEL_URLS = [
+    "https://www.youtube.com/@LigaKubizma/videos",
+]
 
 
 @dataclass
@@ -23,38 +22,28 @@ class VideoInfo:
     transcript: Optional[str] = None
 
 
-def get_channel_id(youtube, handle: str) -> str:
-    """Resolve @handle to channel ID."""
-    resp = youtube.search().list(
-        part="snippet",
-        q=handle,
-        type="channel",
-        maxResults=1,
-    ).execute()
-    items = resp.get("items", [])
-    if not items:
-        raise ValueError(f"Channel {handle} not found")
-    return items[0]["snippet"]["channelId"]
-
-
-def fetch_recent_videos(youtube, channel_id: str, max_results: int = 10) -> List[VideoInfo]:
-    """Fetch recent video metadata from a channel."""
-    search_resp = youtube.search().list(
-        part="snippet",
-        channelId=channel_id,
-        maxResults=max_results,
-        order="date",
-        type="video",
-    ).execute()
+def fetch_recent_videos(channel_url: str, max_results: int = 10) -> List[VideoInfo]:
+    """Fetch recent video metadata from a channel via yt-dlp."""
+    ydl_opts = {
+        "quiet": True,
+        "extract_flat": True,
+        "playlistend": max_results,
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(channel_url, download=False)
 
     videos: List[VideoInfo] = []
-    for item in search_resp.get("items", []):
-        snippet = item["snippet"]
+    for entry in info.get("entries", []):
+        if not entry:
+            continue
+        video_id = entry.get("id", "")
+        if not video_id:
+            continue
         videos.append(VideoInfo(
-            video_id=item["id"]["videoId"],
-            channel_id=snippet["channelId"],
-            title=snippet["title"],
-            published_at=datetime.fromisoformat(snippet["publishedAt"].replace("Z", "+00:00")),
+            video_id=video_id,
+            channel_id=entry.get("channel_id", ""),
+            title=entry.get("title", ""),
+            published_at=datetime.fromtimestamp(entry.get("timestamp", 0)),
         ))
     return videos
 
@@ -75,16 +64,11 @@ def get_new_videos(
     max_per_channel: int = 10,
 ) -> List[VideoInfo]:
     """Get new videos with transcripts that haven't been processed yet."""
-    if not YOUTUBE_API_KEY:
-        raise RuntimeError("YOUTUBE_API_KEY not set")
-
-    youtube = build("youtube", "v3", developerKey=YOUTUBE_API_KEY, cache_discovery=False)
     new_videos: List[VideoInfo] = []
 
-    for handle in CHANNEL_HANDLES:
+    for channel_url in CHANNEL_URLS:
         try:
-            channel_id = get_channel_id(youtube, handle)
-            videos = fetch_recent_videos(youtube, channel_id, max_per_channel)
+            videos = fetch_recent_videos(channel_url, max_per_channel)
             for video in videos:
                 if video.video_id in processed_ids:
                     continue
@@ -93,7 +77,7 @@ def get_new_videos(
                     video.transcript = transcript
                     new_videos.append(video)
         except Exception as exc:
-            print(f"Skipping channel {handle}: {exc}")
+            print(f"Skipping channel {channel_url}: {exc}")
             continue
 
     return new_videos

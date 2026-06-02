@@ -1,17 +1,14 @@
-"""Neon Postgres database layer."""
+"""Neon Postgres database layer for business tables (not RAG)."""
 
 import os
 from contextlib import contextmanager
 from typing import List
 
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import psycopg
 
 NEON_DATABASE_URL = os.environ.get("NEON_DATABASE_URL")
 
 SCHEMA_SQL = """
-CREATE EXTENSION IF NOT EXISTS vector;
-
 CREATE TABLE IF NOT EXISTS videos (
     id TEXT PRIMARY KEY,
     channel_id TEXT NOT NULL,
@@ -19,18 +16,6 @@ CREATE TABLE IF NOT EXISTS videos (
     published_at TIMESTAMPTZ NOT NULL,
     processed_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-CREATE TABLE IF NOT EXISTS wiki_chunks (
-    id SERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
-    embedding VECTOR(1536),
-    source TEXT NOT NULL,
-    metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_wiki_chunks_embedding
-ON wiki_chunks USING hnsw (embedding vector_cosine_ops);
 
 CREATE TABLE IF NOT EXISTS articles (
     id SERIAL PRIMARY KEY,
@@ -44,7 +29,7 @@ CREATE TABLE IF NOT EXISTS articles (
 
 
 def init_db():
-    """Create tables and extensions."""
+    """Create business tables. RAG tables are managed by LangChain PGVector."""
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(SCHEMA_SQL)
@@ -55,7 +40,9 @@ def init_db():
 def get_conn():
     if not NEON_DATABASE_URL:
         raise RuntimeError("NEON_DATABASE_URL not set")
-    conn = psycopg2.connect(NEON_DATABASE_URL)
+    # Use psycopg3 connection (strip +psycopg if present for raw psycopg)
+    url = NEON_DATABASE_URL.replace("postgresql+psycopg://", "postgresql://")
+    conn = psycopg.connect(url)
     try:
         yield conn
     finally:
