@@ -6,7 +6,8 @@ from agents.database import init_db
 from agents.ideator import generate_ideas
 from agents.wiki_updater import run as run_wiki_updater
 from agents.writer import write_article
-from agents.youtube import get_new_videos, get_processed_video_ids
+from agents.database import get_processed_video_ids
+from agents.youtube import get_new_videos
 
 
 def main():

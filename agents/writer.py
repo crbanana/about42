@@ -16,7 +16,25 @@ ARTICLES_DIR = Path("site/src/content/articles")
 
 
 def _slugify(title: str) -> str:
-    return re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')[:60]
+    # Transliterate Cyrillic to Latin for URL slugs
+    cyr_to_lat = {
+        'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh','з':'z',
+        'и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r',
+        'с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'shch',
+        'ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',' ':'-',
+    }
+    title = title.lower()
+    result = []
+    for ch in title:
+        if ch in cyr_to_lat:
+            result.append(cyr_to_lat[ch])
+        elif ch.isalnum():
+            result.append(ch)
+        else:
+            result.append('-')
+    slug = ''.join(result)
+    slug = re.sub(r'-+', '-', slug).strip('-')
+    return slug[:60]
 
 
 def write_article(idea: ArticleIdea) -> Optional[str]:
@@ -67,7 +85,7 @@ def write_article(idea: ArticleIdea) -> Optional[str]:
         date_str = datetime.now().strftime("%Y-%m-%d")
         frontmatter = f"""---
 title: "{idea.title}"
-date: {date_str}
+date: "{date_str}"
 tags: []
 draft: false
 ---

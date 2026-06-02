@@ -39,11 +39,13 @@ def fetch_recent_videos(channel_url: str, max_results: int = 10) -> List[VideoIn
         video_id = entry.get("id", "")
         if not video_id:
             continue
+        ts = entry.get("timestamp")
+        published_at = datetime.fromtimestamp(ts) if ts else datetime.utcnow()
         videos.append(VideoInfo(
             video_id=video_id,
             channel_id=entry.get("channel_id", ""),
             title=entry.get("title", ""),
-            published_at=datetime.fromtimestamp(entry.get("timestamp", 0)),
+            published_at=published_at,
         ))
     return videos
 
