@@ -27,21 +27,23 @@ def main():
         except Exception as exc:
             print(f"[Pipeline] Wiki updater failed for {video.video_id}: {exc}")
 
-    # --- Step 2: Generate article ideas ---
-    print("[Pipeline] Step 2: Generating article ideas...")
+    # --- Step 2: Generate 1 article idea based on fresh content ---
+    print("[Pipeline] Step 2: Generating article idea...")
     try:
-        ideas = generate_ideas(count=3)
+        ideas = generate_ideas(count=1)
     except Exception as exc:
         print(f"[Pipeline] Ideator failed: {exc}")
         ideas = []
 
-    # --- Step 3: Write articles ---
-    print("[Pipeline] Step 3: Writing articles...")
-    for idea in ideas:
+    # --- Step 3: Write 1 article ---
+    print("[Pipeline] Step 3: Writing article...")
+    if ideas:
         try:
-            write_article(idea)
+            write_article(ideas[0])
         except Exception as exc:
-            print(f"[Pipeline] Writer failed for '{idea.title}': {exc}")
+            print(f"[Pipeline] Writer failed for '{ideas[0].title}': {exc}")
+    else:
+        print("[Pipeline] No ideas generated, skipping article.")
 
     print("[Pipeline] Done.")
 

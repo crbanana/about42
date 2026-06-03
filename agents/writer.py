@@ -95,11 +95,14 @@ draft: false
 """
         article_md = frontmatter + article_md
 
-    # Save
+    # Anti-duplicate: skip if same slug already exists
     ARTICLES_DIR.mkdir(parents=True, exist_ok=True)
     slug = _slugify(idea.title)
     filepath = ARTICLES_DIR / f"{slug}.md"
-    filepath.write_text(article_md, encoding="utf-8")
+    if filepath.exists():
+        print(f"[Writer] Skipped duplicate: {filepath}")
+        return None
 
+    filepath.write_text(article_md, encoding="utf-8")
     print(f"[Writer] Saved article: {filepath}")
     return str(filepath)
