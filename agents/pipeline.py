@@ -15,12 +15,13 @@ def main():
     init_db()
 
     # --- Step 1: Fetch new videos and update wiki ---
-    print("[Pipeline] Step 1: Fetching new videos...")
+    print("[Pipeline] Step 1: Fetching new videos (target=10)...")
     processed_ids = get_processed_video_ids()
-    new_videos = get_new_videos(processed_ids, max_per_channel=5)
-    print(f"[Pipeline] Found {len(new_videos)} new videos")
+    new_videos = get_new_videos(processed_ids, target_count=10)
+    print(f"[Pipeline] Found {len(new_videos)} new videos with transcripts")
 
-    for video in new_videos:
+    for idx, video in enumerate(new_videos, 1):
+        print(f"[Pipeline] [{idx}/{len(new_videos)}] Processing: {video.title[:60]}...")
         try:
             run_wiki_updater(video)
         except Exception as exc:

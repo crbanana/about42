@@ -57,15 +57,17 @@ def write_article(idea: ArticleIdea) -> Optional[str]:
             seen.add(chunk.page_content)
             unique_chunks.append(chunk)
 
-    context_text = "\n\n---\n\n".join(
-        f"Источник: {c.metadata.get('source', 'wiki')}\n{c.page_content}"
-        for c in unique_chunks[:10]
-    )
+    # Hide sources from LLM to prevent it from saying "according to wiki"
+    context_text = "\n\n".join(c.page_content for c in unique_chunks[:10])
 
     llm = ChatOpenAI(model=LLM_MODEL, temperature=0.7)
     system = SystemMessage(content=(
         "Ты — автор статей для фан-сайта HYPERISE о стримере Пятерка. "
-        "Пиши живо, с юмором, но достоверно. Используй только предоставленный контекст. "
+        "Пиши от первого лица наблюдателя и фана — живо, с юмором, но достоверно. "
+        "НИКОГДА не упоминай вики, базу знаний, транскрипции, источники или то, что ты "
+        "что-то "прочитал" или "узнал откуда-то". Пиши как человек, который сам всё видел. "
+        "Не используй фразы типа: согласно вики, как написано, данные показывают, "
+        "транскрипция свидетельствует. Просто рассказывай факты уверенно и естественно. "
         "Структура: вступление, основная часть с фактами, заключение. "
         "Выходной формат: Markdown с YAML frontmatter (title, date, tags)."
     ))
@@ -73,7 +75,7 @@ def write_article(idea: ArticleIdea) -> Optional[str]:
         f"Идея: {idea.title}\n"
         f"Угол: {idea.angle}\n"
         f"Синопсис: {idea.synopsis}\n\n"
-        f"Контекст:\n{context_text[:15000]}\n\n"
+        f"Факты и события для статьи:\n{context_text[:15000]}\n\n"
         "Напиши полноценную статью в Markdown."
     ))
 
