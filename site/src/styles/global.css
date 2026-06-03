@@ -2,6 +2,54 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Article typography */
+.prose h2 {
+  @apply text-2xl font-bold text-zinc-100 mt-10 mb-4 pb-2 border-b border-zinc-800;
+}
+
+.prose p {
+  @apply text-zinc-300 leading-relaxed mb-4 text-base;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-indigo-500 pl-4 italic text-zinc-400 my-6 bg-zinc-900/50 py-3 pr-4 rounded-r;
+}
+
+.prose blockquote p {
+  @apply text-zinc-400 italic mb-0;
+}
+
+.prose strong {
+  @apply text-zinc-100 font-semibold;
+}
+
+.prose em {
+  @apply text-zinc-300;
+}
+
+.prose ul {
+  @apply list-disc list-inside text-zinc-300 mb-4 space-y-1 ml-4;
+}
+
+.prose ol {
+  @apply list-decimal list-inside text-zinc-300 mb-4 space-y-1 ml-4;
+}
+
+.prose li {
+  @apply text-zinc-300;
+}
+
+.prose hr {
+  @apply border-zinc-800 my-8;
+}
+
+/* First paragraph (lead) styling */
+.prose > p:first-of-type {
+  @apply text-lg text-zinc-200 leading-relaxed;
 }
