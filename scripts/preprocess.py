@@ -1,11 +1,6 @@
 """Preprocess raw sources into inbox/ files.
 
-Supports:
-- YouTube (subtitles via yt-dlp, metadata extraction)
-- Twitch clips (audio -> Whisper -> Gemini description, metadata)
-- TikTok (audio -> Whisper -> Gemini description, metadata)
-- Telegram (web scraping, metadata)
-- Plain text (pass-through)
+Extracts metadata from source (not from issue). No issue URLs, no GitHub metadata.
 """
 
 import json
@@ -41,13 +36,9 @@ def _extract_url(body: str) -> str | None:
     return urls[0] if urls else None
 
 
-# ── Metadata helpers ──────────────────────────────────
-
 def _format_date(raw: str | None) -> str:
-    """Convert various date formats to YYYY-MM-DD."""
     if not raw:
         return ""
-    # yt-dlp returns YYYYMMDD or ISO
     raw = raw.strip()
     if len(raw) == 8 and raw.isdigit():
         return f"{raw[:4]}-{raw[4:6]}-{raw[6:]}"
@@ -56,18 +47,6 @@ def _format_date(raw: str | None) -> str:
         return dt.strftime("%Y-%m-%d")
     except Exception:
         return raw[:10]
-
-
-def _build_meta_block(title: str | None, date: str | None, source_type: str,
-                      author: str | None) -> str:
-    lines = [f"Тип источника: {source_type}"]
-    if title:
-        lines.append(f"Название: {title}")
-    if date:
-        lines.append(f"Дата публикации: {date}")
-    if author:
-        lines.append(f"Автор: {author}")
-    return "\n".join(lines)
 
 
 # ── YouTube ──────────────────────────────────────────
@@ -95,7 +74,6 @@ def _fetch_youtube_info(video_id: str) -> tuple[str | None, str | None, str | No
     uploader = None
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # First pass: get metadata
         ydl_opts_meta = {"quiet": True, "skip_download": True}
         try:
             with yt_dlp.YoutubeDL(ydl_opts_meta) as ydl:
@@ -106,7 +84,6 @@ def _fetch_youtube_info(video_id: str) -> tuple[str | None, str | None, str | No
         except Exception:
             pass
 
-        # Second pass: get subtitles
         ydl_opts_sub = {
             "quiet": True,
             "skip_download": True,
@@ -146,10 +123,9 @@ def _parse_subtitles(content: str, fmt: str) -> str:
     return " ".join(lines)
 
 
-# ── Twitch / TikTok (video -> audio -> whisper -> gemini) ──
+# ── Twitch / TikTok ──────────────────────────────────
 
 def _fetch_video_info(url: str) -> tuple[str | None, str | None, str | None]:
-    """Return (title, upload_date, uploader)."""
     ydl_opts = {"quiet": True, "skip_download": True}
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -215,25 +191,24 @@ def _gemini_describe(context: str, source_type: str) -> str | None:
 
 
 def _process_video(url: str, source_type: str) -> tuple[str, str | None, str | None, str | None]:
-    """Download, transcribe, describe. Returns (body_text, title, date, author)."""
     title, upload_date, uploader = _fetch_video_info(url)
 
     print(f"[Preprocess] Downloading {source_type} audio...")
     audio = _download_audio(url)
     if not audio:
-        return f"URL: {url}\n\n[Не удалось скачать аудио]", title, upload_date, uploader
+        return f"[Не удалось скачать аудио]", title, upload_date, uploader
 
     print(f"[Preprocess] Transcribing with Whisper...")
     transcript = _whisper_transcribe(audio)
     if not transcript:
-        return f"URL: {url}\n\n[Не удалось получить транскрипцию]", title, upload_date, uploader
+        return f"[Не удалось получить транскрипцию]", title, upload_date, uploader
 
-    context = f"URL: {url}\n\nТранскрипция:\n{transcript}"
+    context = f"Транскрипция:\n{transcript}"
     print(f"[Preprocess] Describing with Gemini...")
     description = _gemini_describe(context, source_type)
 
     if description:
-        body = f"URL: {url}\n\nОписание:\n{description}"
+        body = f"Описание:\n{description}"
     else:
         body = context
     return body, title, upload_date, uploader
@@ -242,21 +217,17 @@ def _process_video(url: str, source_type: str) -> tuple[str, str | None, str | N
 # ── Telegram ─────────────────────────────────────────
 
 def _fetch_telegram_post(url: str) -> tuple[str | None, str | None, str | None]:
-    """Scrape public Telegram post. Returns (text, channel_name, post_date)."""
     try:
         resp = requests.get(url + "?embed=1", timeout=15, headers={"User-Agent": "Mozilla/5.0"})
         resp.raise_for_status()
 
-        # Extract channel name from URL
         parsed = urlparse(url)
         path_parts = parsed.path.strip("/").split("/")
         channel_name = path_parts[0] if path_parts else None
 
-        # Extract date from HTML
         date_match = re.search(r'<time[^>]*datetime="([^"]+)"', resp.text)
         post_date = date_match.group(1) if date_match else None
 
-        # Extract text
         text_match = re.search(r'<div class="tgme_widget_message_text[^"]*">(.*?)</div>', resp.text, re.DOTALL)
         if text_match:
             raw = text_match.group(1)
@@ -270,20 +241,21 @@ def _fetch_telegram_post(url: str) -> tuple[str | None, str | None, str | None]:
 
 # ── Builder ─────────────────────────────────────────────
 
-def _build_inbox_file(issue_id: int, issue_title: str, source_type: str,
-                      source_url: str | None, meta_block: str, body_text: str,
-                      published_at: str | None = None) -> str:
+def _build_inbox_file(source_type: str, title: str | None, date: str | None,
+                      author: str | None, body_text: str) -> str:
     frontmatter = {
-        "issue_id": issue_id,
-        "issue_title": issue_title,
-        "source_type": source_type,
-        "source_url": source_url or "",
-        "submitted_at": datetime.now(timezone.utc).isoformat(),
-        "published_at": published_at or "",
+        "type": source_type,
         "approved": False,
     }
+    if title:
+        frontmatter["title"] = title
+    if date:
+        frontmatter["date"] = date
+    if author:
+        frontmatter["author"] = author
+
     fm = "\n".join(f'{k}: {json.dumps(v)}' for k, v in frontmatter.items())
-    return f"---\n{fm}\n---\n\n## Метаданные\n\n{meta_block}\n\n## Описание\n\n{body_text}\n"
+    return f"---\n{fm}\n---\n\n{body_text}\n"
 
 
 def process_issue(issue_id: int, issue_title: str, issue_body: str,
@@ -309,11 +281,11 @@ def process_issue(issue_id: int, issue_title: str, issue_body: str,
             date = _format_date(upload_date)
             author = uploader
             if transcript:
-                body_text = f"URL: {source_url}\n\nТранскрипция:\n{transcript}"
+                body_text = transcript
             else:
-                body_text = f"URL: {source_url}\n\n[Не удалось получить транскрипцию]"
+                body_text = "[Не удалось получить транскрипцию]"
         else:
-            body_text = f"URL: {source_url}\n\n[Не удалось извлечь video_id]"
+            body_text = "[Не удалось извлечь video_id]"
 
     elif source_type in ("twitch", "tiktok") and source_url:
         body_text, title, upload_date, uploader = _process_video(source_url, source_type)
@@ -322,25 +294,21 @@ def process_issue(issue_id: int, issue_title: str, issue_body: str,
 
     elif source_type == "telegram" and source_url:
         post_text, channel_name, post_date = _fetch_telegram_post(source_url)
-        title = None  # Telegram posts don't have titles
         date = _format_date(post_date)
         author = channel_name
         if post_text:
-            body_text = f"URL: {source_url}\n\nТекст поста:\n{post_text}"
+            body_text = post_text
         else:
-            body_text = f"URL: {source_url}\n\n[Не удалось получить текст поста]"
+            body_text = "[Не удалось получить текст поста]"
 
     else:
-        # text or no URL
         body_text = issue_body or ""
         title = issue_title if issue_title else None
         date = _format_date(created_at)
 
-    meta_block = _build_meta_block(title, date, source_type, author)
-
     filename = _slugify_issue(issue_title, issue_id)
     filepath = INBOX_DIR / filename
-    content = _build_inbox_file(issue_id, issue_title, source_type, source_url, meta_block, body_text, created_at)
+    content = _build_inbox_file(source_type, title, date, author, body_text)
     filepath.write_text(content, encoding="utf-8")
     print(f"[Preprocess] Created {filepath}")
     return str(filepath)
