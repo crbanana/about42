@@ -5,8 +5,6 @@ const wiki = defineCollection({
   schema: z.object({
     title: z.string(),
     tags: z.array(z.string()).default([]),
-    sources: z.array(z.string()).default([]),
-    last_updated: z.string().optional(),
   }),
 });
 

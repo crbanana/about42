@@ -2,9 +2,8 @@
 interface Props {
   title: string;
   tags: string[];
-  lastUpdated?: string;
 }
-const { title, tags, lastUpdated } = Astro.props;
+const { title, tags } = Astro.props;
 ---
 
 <html lang="ru">
@@ -24,12 +23,8 @@ const { title, tags, lastUpdated } = Astro.props;
       <header class="mb-12 pb-8 border-b border-zinc-800">
         <h1 class="text-4xl font-extrabold tracking-tight mb-4 text-white">{title}</h1>
         <div class="flex flex-wrap gap-3 text-sm text-zinc-400 items-center">
-          {lastUpdated && (
-            <time class="font-medium">Обновлено: {new Date(lastUpdated).toLocaleDateString('ru-RU')}</time>
-          )}
           {tags.length > 0 && (
             <>
-              <span class="text-zinc-600">•</span>
               {tags.map((tag) => (
                 <span class="bg-zinc-800/80 px-3 py-1 rounded-full text-zinc-300 text-xs font-medium">#{tag}</span>
               ))}

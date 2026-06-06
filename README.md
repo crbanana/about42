@@ -1,40 +1,41 @@
 # HYPERISE
 
-Автоматизированный фан-сайт о стримере Пятерка (5opka).
-
-Генерирует статьи, истории и лонгриды на основе транскрипций YouTube-видео нарезчиков.
+Автоматизированная вики о стримере Пятерка (5opka).
 
 ## Архитектура
 
-- **Pipeline:** GitHub Actions (ежедневный cron) — $0
-- **RAG:** Neon Postgres (pgvector) — $0
-- **Site:** Astro static site → Render Static Site — $0
-- **LLM:** OpenAI `gpt-5-nano` + `text-embedding-3-small`
+GitHub Issue (label: type:*, body: ссылка/текст)
+    │
+    ▼
+inbox/issue-N_*.md  ← предобработанный источник с метаданными
+    │
+    │ /approve
+    ▼
+daily-pipeline (wiki_editor агент на Deep Agents)
+    │
+    ▼
+wiki/*.md  ← граф знаний
+    │
+    ▼
+Astro Site  ← сайт с wiki-страницами
 
-## Пайплайн
+## Поддерживаемые источники
 
-1. **Wiki Updater** — скачивает транскрипции, обновляет структурированную вики
-2. **Ideator** — запрашивает RAG, придумывает идеи статей
-3. **Writer** — пишет статьи с использованием RAG-контекста
+| Тип | Обработка |
+|-----|-----------|
+| `type:youtube` | Субтитры через yt-dlp + title/uploader/date |
+| `type:twitch` | Аудио → Whisper → Gemini описание + метаданные |
+| `type:tiktok` | Аудио → Whisper → Gemini описание + метаданные |
+| `type:telegram` | Web scraping текста поста + channel/date |
+| `type:text` | Пропускается как есть |
 
-## Запуск локально
+## Как использовать
 
-```bash
-pip install -r requirements.txt
-python -m agents.pipeline
-```
-
-## Структура
-
-```
-.
-├── agents/              # Python-агенты
-├── wiki/                # Структурированная вики (Markdown)
-├── site/                # Astro статичный сайт
-├── .github/workflows/   # CI/CD
-├── render.yaml          # Render Blueprint
-└── ARCHITECTURE.md      # Детальная архитектура
-```
+1. Создать GitHub Issue с label `type:youtube` (или другой)
+2. В body вставить ссылку или текст
+3. Бот предобработает → пишет в issue «Добавлено в предложку»
+4. Написать `/approve` в комментарий
+5. Следующий день 03:00 UTC — агент обновляет wiki
 
 ## Переменные окружения
 
