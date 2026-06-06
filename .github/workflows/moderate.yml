@@ -26,6 +26,7 @@ jobs:
         run: uv sync
 
       - name: Approve or reject
+        id: moderate
         run: |
           if [[ "${{ github.event.comment.body }}" == /approve* ]]; then
             uv run python scripts/preprocess.py approve --issue-id ${{ github.event.issue.number }}
@@ -35,6 +36,8 @@ jobs:
             LABEL="rejected"
           fi
           echo "label=$LABEL" >> $GITHUB_OUTPUT
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
       - name: Commit changes
         run: |

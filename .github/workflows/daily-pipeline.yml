@@ -2,7 +2,7 @@ name: Daily Pipeline
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 03:00 UTC daily
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 jobs:
@@ -28,6 +28,7 @@ jobs:
         run: uv run python scripts/pipeline.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
 
       - name: Commit and push changes
         run: |
