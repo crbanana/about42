@@ -1,37 +1,40 @@
 ---
 import { getCollection } from 'astro:content';
-const articles = await getCollection('articles', ({ data }) => !data.draft);
-articles.sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+const pages = await getCollection('wiki');
+pages.sort((a, b) => a.data.title.localeCompare(b.data.title, 'ru'));
 ---
 
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>HYPERISE — О Пятерке</title>
+    <title>HYPERISE Вики — О Пятерке</title>
+    <link rel="stylesheet" href="/src/styles/global.css" />
   </head>
   <body class="bg-zinc-950 text-zinc-100 min-h-screen">
     <main class="max-w-3xl mx-auto px-6 py-12">
       <header class="mb-12">
         <h1 class="text-4xl font-extrabold tracking-tight mb-2">HYPERISE</h1>
-        <p class="text-zinc-400 text-lg">Истории, новости, лонгриды и заметки о стримере Пятерка</p>
+        <p class="text-zinc-400 text-lg">Вики о стримере Пятерка — собрание знаний, событий и историй</p>
       </header>
 
       <section>
-        <h2 class="text-xl font-semibold mb-6 text-zinc-300">Последние статьи</h2>
-        {articles.length === 0 && (
-          <p class="text-zinc-500">Пока статей нет. Скоро появятся!</p>
+        <h2 class="text-xl font-semibold mb-6 text-zinc-300">Все страницы</h2>
+        {pages.length === 0 && (
+          <p class="text-zinc-500">Пока страниц нет. Скоро появятся!</p>
         )}
-        <ul class="space-y-6">
-          {articles.map((article) => (
-            <li class="border-b border-zinc-800 pb-6">
-              <a href={`/articles/${article.slug}`} class="group block">
-                <h3 class="text-xl font-bold text-zinc-100 group-hover:text-indigo-400 transition mb-1">
-                  {article.data.title}
+        <ul class="space-y-3">
+          {pages.map((page) => (
+            <li class="border border-zinc-800 rounded-lg p-4 hover:border-zinc-700 transition">
+              <a href={`/wiki/${page.slug}`} class="group block">
+                <h3 class="text-lg font-bold text-zinc-100 group-hover:text-indigo-400 transition mb-1">
+                  {page.data.title}
                 </h3>
-                <time class="text-sm text-zinc-500">
-                  {article.data.date.toLocaleDateString('ru-RU')}
-                </time>
+                <div class="flex flex-wrap gap-2 text-xs text-zinc-500">
+                  {page.data.tags.map((tag) => (
+                    <span class="bg-zinc-800/60 px-2 py-0.5 rounded text-zinc-400">#{tag}</span>
+                  ))}
+                </div>
               </a>
             </li>
           ))}

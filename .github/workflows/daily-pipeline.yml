@@ -24,16 +24,15 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Run pipeline
-        run: uv run python -m agents.pipeline
+      - name: Run wiki editor pipeline
+        run: uv run python scripts/pipeline.py
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          NEON_DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
 
       - name: Commit and push changes
         run: |
           git config user.name "hyperise-bot"
           git config user.email "bot@hyperise.dev"
-          git add wiki/ site/src/content/articles/
-          git diff --cached --quiet || git commit -m "auto: content update $(date -I)"
+          git add wiki/
+          git diff --cached --quiet || git commit -m "auto: wiki update $(date -I)"
           git push

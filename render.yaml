@@ -2,7 +2,7 @@ services:
   - type: web
     name: hyperise
     runtime: static
-    buildCommand: cd site && npm ci && npm run build
+    buildCommand: cd site && rm -rf src/content/wiki && cp -r ../wiki src/content/wiki && npm ci && npm run build
     staticPublishPath: site/dist
     routes:
       - type: rewrite

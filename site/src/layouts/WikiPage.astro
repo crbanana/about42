@@ -1,0 +1,48 @@
+---
+interface Props {
+  title: string;
+  tags: string[];
+  lastUpdated?: string;
+}
+const { title, tags, lastUpdated } = Astro.props;
+---
+
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} — HYPERISE Вики</title>
+    <link rel="stylesheet" href="/src/styles/global.css" />
+  </head>
+  <body class="bg-zinc-950 text-zinc-100 min-h-screen">
+    <main class="max-w-3xl mx-auto px-6 py-12">
+      <nav class="mb-8 flex items-center gap-3 text-sm">
+        <a href="/" class="text-indigo-400 hover:text-indigo-300 transition font-medium">← Главная</a>
+        <span class="text-zinc-700">/</span>
+        <span class="text-zinc-400">Вики</span>
+      </nav>
+      <header class="mb-12 pb-8 border-b border-zinc-800">
+        <h1 class="text-4xl font-extrabold tracking-tight mb-4 text-white">{title}</h1>
+        <div class="flex flex-wrap gap-3 text-sm text-zinc-400 items-center">
+          {lastUpdated && (
+            <time class="font-medium">Обновлено: {new Date(lastUpdated).toLocaleDateString('ru-RU')}</time>
+          )}
+          {tags.length > 0 && (
+            <>
+              <span class="text-zinc-600">•</span>
+              {tags.map((tag) => (
+                <span class="bg-zinc-800/80 px-3 py-1 rounded-full text-zinc-300 text-xs font-medium">#{tag}</span>
+              ))}
+            </>
+          )}
+        </div>
+      </header>
+      <article class="prose prose-invert prose-zinc max-w-none">
+        <slot />
+      </article>
+      <footer class="mt-16 pt-8 border-t border-zinc-800 text-center">
+        <a href="/" class="text-indigo-400 hover:text-indigo-300 transition font-medium">← Все страницы</a>
+      </footer>
+    </main>
+  </body>
+</html>

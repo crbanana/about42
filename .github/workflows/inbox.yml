@@ -1,0 +1,55 @@
+name: Inbox Preprocess
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  preprocess:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "0.5.x"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Preprocess issue
+        run: |
+          uv run python scripts/preprocess.py process \
+            --issue-id ${{ github.event.issue.number }} \
+            --issue-title ${{ toJson(github.event.issue.title) }} \
+            --issue-body ${{ toJson(github.event.issue.body) }} \
+            --labels ${{ toJson(github.event.issue.labels) }} \
+            --created-at ${{ github.event.issue.created_at }}
+        env:
+          NODE_PATH: /usr/local/bin/node
+
+      - name: Commit inbox file
+        run: |
+          git config user.name "hyperise-bot"
+          git config user.email "bot@hyperise.dev"
+          git add inbox/
+          git diff --cached --quiet || git commit -m "auto: inbox source from issue #${{ github.event.issue.number }}"
+          git push
+
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "Добавлено в предложку. Для одобрения напиши `/approve`, для отклонения — `/reject`."
+            })
